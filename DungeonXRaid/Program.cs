@@ -1,14 +1,21 @@
-﻿
-namespace DungeonXRaid
+﻿namespace DungeonXRaid
 {
     internal static class Program
     {
         static void Main()
         {
-            Console.Title = "DungeonXRaid – ASCII Rogue";
-            Console.CursorVisible = false;
-            App.Run();
-            Console.CursorVisible = true;
+            try
+            {
+                Console.Title = "DungeonXRaid – ASCII Rogue";
+                Console.CursorVisible = false;
+                App.Run();
+            }
+            finally
+            {
+                Console.CursorVisible = true;
+            }
+
+            Environment.Exit(0);
         }
     }
 }

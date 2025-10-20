@@ -47,7 +47,7 @@ namespace DungeonXRaid.Core
                     if (s != null)
                         list.Add((s.Id, $"{s.SaveName}  —  {s.Hero.Class}  —  {s.LastPlayed:g}"));
                 }
-                catch { /* ignore */ }
+                catch {  }
             }
 
             return list

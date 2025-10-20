@@ -20,7 +20,7 @@
 
         public char GetTile(int x, int y) => tiles[y, x];
 
-        // Walkable: alles außer Wand ('#') – so kann man auch auf Truhen stehen
+        // Walkable: alles außer Wand ("#") – so kann man auch auf Truhen stehen
         public bool IsWalkable(int x, int y)
         {
             if (x < 0 || y < 0 || x >= Width || y >= Height) return false;
@@ -60,7 +60,7 @@
             var rooms = new List<(int cx, int cy)>();
 
             int area = Width * Height;
-            int roomCount = Math.Clamp(area / 180, 10, 22); // viele kleine Räume
+            int roomCount = Math.Clamp(area / 180, 10, 22); 
 
             for (int i = 0; i < roomCount; i++)
             {

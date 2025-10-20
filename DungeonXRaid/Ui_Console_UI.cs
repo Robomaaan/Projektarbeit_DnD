@@ -4,7 +4,7 @@
 
     public static class ConsoleUI
     {
-        // --------- Low-level Safe Writes ---------
+        // Low-level Safe Writes 
         private static int MaxW => Math.Max(1, Math.Min(Console.BufferWidth, Console.WindowWidth));
         private static int MaxH => Math.Max(1, Math.Min(Console.BufferHeight, Console.WindowHeight));
 
@@ -42,7 +42,7 @@
 
         public static ConsoleKeyInfo ReadKey() => Console.ReadKey(true);
 
-        // --------- High-level UI helpers ---------
+        // High-level UI helpers
         public static void ClearWithSize(int w = 110, int h = 35)
         {
             // Zielgrößen begrenzen

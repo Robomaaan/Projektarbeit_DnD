@@ -1,5 +1,4 @@
-﻿using System;
-using DungeonXRaid.Core;
+﻿using DungeonXRaid.Core;
 using DungeonXRaid.UI;
 
 namespace DungeonXRaid
@@ -15,7 +14,6 @@ namespace DungeonXRaid
 
             while (true)
             {
-                // Hauptmenü anzeigen (Pfeiltasten/Enter/Esc handled in MainMenu.Show)
                 var choice = MainMenu.Show();
 
                 switch (choice)
@@ -29,7 +27,7 @@ namespace DungeonXRaid
                             );
                             break;
                         }
-                        DungeonGame.Run(current); // Spiel starten
+                        DungeonGame.Run(current); 
                         current.LastPlayed = DateTime.Now;
                         break;
 
@@ -61,12 +59,11 @@ namespace DungeonXRaid
 
                     case MainMenu.Result.Delete:
                         DeleteMenu.ShowAndDelete();
-                        // (Optional) Du kannst hier current auf null setzen, wenn du sicher bist, dass der
-                        // aktive Spielstand gelöscht wurde. Ohne Rückgabe-ID lassen wir ihn bestehen.
+                        
                         break;
 
                     case MainMenu.Result.Quit:
-                        // zurück an Program.Main -> Environment.Exit erfolgt dort
+                        
                         return;
                 }
             }

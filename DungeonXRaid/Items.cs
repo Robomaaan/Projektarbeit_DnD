@@ -1,9 +1,19 @@
 ﻿namespace DungeonXRaid.Items
 {
-   using DungeonXRaid.Core;
+    using DungeonXRaid.Core;
 
     // Seltenheiten
     public enum Rarity { Common, Rare, Epic, Legendary }
+
+    // Item-Datenmodell
+    public class ItemModel
+    {
+        public string Name { get; set; } = "Item";
+        public Rarity Rarity { get; set; } = Rarity.Common;
+        public EquipmentSlot Slot { get; set; } = EquipmentSlot.Weapon;
+        public StatBlock Bonus { get; set; } = new StatBlock();
+        public int Power { get; set; } = 0;  // einfache Vergleichs-Metrik
+    }
 
     // Einfache Loot-Tabelle mit Slots & Stat-Boni
     public static class LootTable
@@ -88,36 +98,37 @@
                 {
                     DEF = rnd.Next(1, 2 + m),
                     VIT = rnd.Next(0, 1 + m),
-                    HPBonus = rnd.Next(0, 6 * m)
+                    HPBonus = rnd.Next(0, 3 * m)
                 };
-                int p = b.DEF * 3 + b.VIT * 2 + b.HPBonus / 5 + m;
+                int p = b.DEF * 3 + b.VIT * 2 + b.HPBonus / 2 + m;
                 string n = rar switch
                 {
-                    Rarity.Common => new[] { "Lederweste", "Gambeson", "Helm" }[rnd.Next(3)],
-                    Rarity.Rare => new[] { "Kettenhemd", "Schuppenpanzer", "Plattenhaube" }[rnd.Next(3)],
-                    Rarity.Epic => new[] { "Drachenleder", "Runenpanzer", "Mondhelm" }[rnd.Next(3)],
-                    Rarity.Legendary => new[] { "Aegis des Lichts", "Sonnenharnisch", "Phönixhülle" }[rnd.Next(3)],
+                    Rarity.Common => new[] { "Lederweste", "Abgenutzter Harnisch", "Gambeson" }[rnd.Next(3)],
+                    Rarity.Rare => new[] { "Kettenhemd", "Gepanzerte Weste", "Schuppenpanzer" }[rnd.Next(3)],
+                    Rarity.Epic => new[] { "Drachenleder", "Mondstahlrüstung", "Runenpanzer" }[rnd.Next(3)],
+                    Rarity.Legendary => new[] { "Aegis des Lichts", "Phönixpanzer", "Sonnenharnisch" }[rnd.Next(3)],
                     _ => "Rüstung"
                 };
                 return (n, b, p);
             }
 
-            // Trinket
+            // Trinket (Schmuck)
             {
                 var b = new StatBlock
                 {
-                    STR = rnd.Next(0, 1 + m),
-                    DEX = rnd.Next(0, 1 + m),
-                    INT = rnd.Next(0, 1 + m),
-                    HPBonus = rnd.Next(0, 4 * m)
+                    STR = rnd.Next(0, m),
+                    DEX = rnd.Next(0, m + 1),
+                    INT = rnd.Next(0, m + 1),
+                    VIT = rnd.Next(0, m),
+                    HPBonus = rnd.Next(0, 2 * m)
                 };
-                int p = b.STR + b.DEX + b.INT + b.HPBonus / 6 + m;
+                int p = b.DEX + b.INT + b.VIT + b.STR + b.HPBonus / 2 + m;
                 string n = rar switch
                 {
-                    Rarity.Common => new[] { "Amulett", "Ring", "Glücksbringer" }[rnd.Next(3)],
-                    Rarity.Rare => new[] { "Smaragdring", "Blitzamulett", "Schattenband" }[rnd.Next(3)],
-                    Rarity.Epic => new[] { "Runenreif", "Drachenring", "Mondamulett" }[rnd.Next(3)],
-                    Rarity.Legendary => new[] { "Phylakterium", "Herz des Phönix", "Sonnenreif" }[rnd.Next(3)],
+                    Rarity.Common => new[] { "Kupferring", "Altes Amulett", "Glücksbringer" }[rnd.Next(3)],
+                    Rarity.Rare => new[] { "Silberreif", "Runenanhänger", "Wanderstein" }[rnd.Next(3)],
+                    Rarity.Epic => new[] { "Sternenreif", "Seelenfokus", "Nebelband" }[rnd.Next(3)],
+                    Rarity.Legendary => new[] { "Herz des Phönix", "Auge der Morgenröte", "Zeitfragment" }[rnd.Next(3)],
                     _ => "Schmuck"
                 };
                 return (n, b, p);

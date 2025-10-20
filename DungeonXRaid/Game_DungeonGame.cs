@@ -1,6 +1,8 @@
 ﻿using DungeonXRaid.Core;
 using DungeonXRaid.UI;
 using System.Text;
+using DungeonXRaid.Items;
+
 
 namespace DungeonXRaid
 {
@@ -16,6 +18,7 @@ namespace DungeonXRaid
             var mapObj = new Map(MAP_W, MAP_H);
             var start = mapObj.GetRandomFloor();
             int px = start.x, py = start.y;
+            var rng = new Random();
 
             bool running = true;
             while (running)
@@ -36,14 +39,11 @@ namespace DungeonXRaid
                         {
                             if (mapObj.TryOpenChest(px, py, out var loot))
                             {
-                                // Vorher-Werte sichern
                                 var beforeStats = session.Hero.TotalStats;
                                 int beforeMaxHp = session.Hero.MaxHp;
 
-                                // Loot ins Inventar
                                 session.Hero.Inventory.Add(loot);
 
-                                // Auto-Equip ausführen
                                 if (session.Hero.TryAutoEquip(loot, out var replaced))
                                 {
                                     var afterStats = session.Hero.TotalStats;
@@ -62,14 +62,12 @@ namespace DungeonXRaid
                                 }
                                 else
                                 {
-                                    // Kein Auto-Equip -> Fund nur anzeigen
                                     MessageBox.ShowCenter(
                                         $"Du findest:\n\n" +
                                         $"• {loot.Name} [{loot.Rarity}] (Power +{loot.Power})\n" +
                                         $"  Boni: {ItemBonusShort(loot)}\n\n(Item im Inventar)"
                                     );
                                 }
-
 
                                 ConsoleUI.ClearWithSize(110, 38);
                                 RenderFrame(session, mapObj, px, py);
@@ -87,7 +85,27 @@ namespace DungeonXRaid
                     case ConsoleKey.DownArrow: ny++; break;
                 }
 
-                if (mapObj.IsWalkable(nx, ny)) { px = nx; py = ny; }
+                if (mapObj.IsWalkable(nx, ny))
+                {
+                    px = nx; py = ny;
+
+                    // Zufalls-Encounter: 5% Chance pro Schritt
+                    if (rng.Next(100) < 5)
+                    {
+                        try
+                        {
+                            if (!HandleEncounter(session))
+                            {
+                                // bei Niederlage: Session speichern & zurück
+                                running = false;
+                            }
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // Flucht erfolgreich: einfach weiterlaufen
+                        }
+                    }
+                }
             }
 
             Console.CursorVisible = false;
@@ -97,7 +115,21 @@ namespace DungeonXRaid
             Console.CursorVisible = true;
         }
 
-        // Rendering (ein Frame) 
+        private static bool HandleEncounter(GameSession session)
+        {
+            bool heroDied, won;
+            int gold;
+            Items.ItemModel? drop;
+
+            won = Combat.Run(session.Hero, out heroDied, out gold, out drop);
+            if (heroDied) return false; 
+
+            // Nachkampf-HP-Check (nie negativ)
+            if (session.Hero.Hp < 0) session.Hero.Hp = 0;
+            return true;
+        }
+
+        // Rendering (ein Frame)
         private static void RenderFrame(GameSession session, Map mapObj, int px, int py)
         {
             var sb = new StringBuilder((mapObj.Width + 1) * (mapObj.Height + 16));
@@ -149,18 +181,16 @@ namespace DungeonXRaid
             if (mapObj.IsChest(px, py))
                 sb.AppendLine("[Enter] Truhe öffnen   |   [Esc] zurück");
             else
-                sb.AppendLine("[WASD] bewegen         |   [Esc] zurück");
+                sb.AppendLine("[WASD] bewegen (5% Encounter)   |   [Esc] zurück");
 
             try { Console.SetCursorPosition(0, 0); } catch { }
             Console.Write(sb.ToString());
         }
 
-        // Anzeige-Helfer 
-
+        // Anzeige-Helfer
         private static string FmtWithBonus(int total, int bonus)
             => bonus != 0 ? $"{total} (+{bonus})" : $"{total}";
 
-        // kompakte Item-Boni: "+STR2, +DEX1, +HP10" oder "—"
         private static string ItemBonusShort(ItemModel it)
         {
             var b = it.Bonus;
@@ -174,7 +204,6 @@ namespace DungeonXRaid
         private static string ItemLine(ItemModel? it)
             => it == null ? "-" : $"{it.Name} ({ItemBonusShort(it)})";
 
-        // Delta-Liste (vorher -> nachher)
         private static string BuildDeltaList(StatBlock before, StatBlock after, int beforeMaxHp, int afterMaxHp)
         {
             var parts = new List<string>();
@@ -183,15 +212,13 @@ namespace DungeonXRaid
                 int d = b - a;
                 if (d != 0) parts.Add($"{label} {(d > 0 ? "+" : "")}{d}");
             }
-
-            add("STR", before.STR, after.STR);
-            add("DEX", before.DEX, after.DEX);
-            add("INT", before.INT, after.INT);
-            add("VIT", before.VIT, after.VIT);
-            add("DEF", before.DEF, after.DEF);
-            add("HP", beforeMaxHp, afterMaxHp); 
-
-            return parts.Count > 0 ? string.Join(", ", parts) : "keine";
+            add(nameof(StatBlock.STR), before.STR, after.STR);
+            add(nameof(StatBlock.DEX), before.DEX, after.DEX);
+            add(nameof(StatBlock.INT), before.INT, after.INT);
+            add(nameof(StatBlock.VIT), before.VIT, after.VIT);
+            add(nameof(StatBlock.DEF), before.DEF, after.DEF);
+            add("MaxHP", beforeMaxHp, afterMaxHp);
+            return parts.Count == 0 ? "—" : string.Join(", ", parts);
         }
     }
 }

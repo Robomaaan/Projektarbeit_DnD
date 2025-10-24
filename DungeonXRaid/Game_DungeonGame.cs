@@ -1,13 +1,15 @@
 ﻿using DungeonXRaid.Core;
 using DungeonXRaid.UI;
-using System.Text;
 using DungeonXRaid.Items;
-
+using DungeonXRaid.Anim;
+using System.Text;
 
 namespace DungeonXRaid
 {
     public static class DungeonGame
     {
+        private record MapEnemy(int X, int Y, string Name, int MaxHp, int Hp, int ATK, int DEF, int Gold, char Glyph, bool IsBoss);
+
         public static void Run(GameSession session)
         {
             ConsoleUI.ClearWithSize(110, 38);
@@ -16,65 +18,27 @@ namespace DungeonXRaid
 
             const int MAP_W = 80, MAP_H = 28;
             var mapObj = new Map(MAP_W, MAP_H);
+            var rng = new Random();
+
+            // Gegner
+            var enemies = SpawnStageEnemies(rng, mapObj, stage: 1);
+            int bossCountdown = 0;
+            bool bossSpawned = false;
+
             var start = mapObj.GetRandomFloor();
             int px = start.x, py = start.y;
-            var rng = new Random();
 
             bool running = true;
             while (running)
             {
-                RenderFrame(session, mapObj, px, py);
+                RenderFrame(session, mapObj, px, py, enemies, bossCountdown, bossSpawned);
 
                 var key = Console.ReadKey(true).Key;
                 int nx = px, ny = py;
 
                 switch (key)
                 {
-                    case ConsoleKey.Escape:
-                        running = false;
-                        break;
-
-                    case ConsoleKey.Enter:
-                        if (mapObj.IsChest(px, py))
-                        {
-                            if (mapObj.TryOpenChest(px, py, out var loot))
-                            {
-                                var beforeStats = session.Hero.TotalStats;
-                                int beforeMaxHp = session.Hero.MaxHp;
-
-                                session.Hero.Inventory.Add(loot);
-
-                                if (session.Hero.TryAutoEquip(loot, out var replaced))
-                                {
-                                    var afterStats = session.Hero.TotalStats;
-                                    int afterMaxHp = session.Hero.MaxHp;
-
-                                    string delta = BuildDeltaList(beforeStats, afterStats, beforeMaxHp, afterMaxHp);
-                                    string bonus = ItemBonusShort(loot);
-
-                                    var msg = $"Du rüstest automatisch aus:\n\n" +
-                                              $"• {loot.Name} [{loot.Rarity}] (Power +{loot.Power})\n" +
-                                              $"  Boni: {bonus}";
-                                    if (replaced != null) msg += $"\nErsetzt: {replaced.Name} (Power +{replaced.Power})";
-                                    msg += $"\n\nÄnderungen: {delta}";
-
-                                    MessageBox.ShowCenter(msg);
-                                }
-                                else
-                                {
-                                    MessageBox.ShowCenter(
-                                        $"Du findest:\n\n" +
-                                        $"• {loot.Name} [{loot.Rarity}] (Power +{loot.Power})\n" +
-                                        $"  Boni: {ItemBonusShort(loot)}\n\n(Item im Inventar)"
-                                    );
-                                }
-
-                                ConsoleUI.ClearWithSize(110, 38);
-                                RenderFrame(session, mapObj, px, py);
-                            }
-                        }
-                        break;
-
+                    case ConsoleKey.Escape: running = false; break;
                     case ConsoleKey.A:
                     case ConsoleKey.LeftArrow: nx--; break;
                     case ConsoleKey.D:
@@ -85,25 +49,64 @@ namespace DungeonXRaid
                     case ConsoleKey.DownArrow: ny++; break;
                 }
 
-                if (mapObj.IsWalkable(nx, ny))
-                {
-                    px = nx; py = ny;
+                if (!mapObj.IsWalkable(nx, ny)) continue;
 
-                    // Zufalls-Encounter: 5% Chance pro Schritt
-                    if (rng.Next(100) < 5)
+                // Bewegung
+                px = nx; py = ny;
+
+                // Auto-Open Chest
+                if (mapObj.IsChest(px, py) && mapObj.TryOpenChest(px, py, out var loot))
+                {
+                    var before = session.Hero.TotalStats.Clone();
+                    int beforeHP = session.Hero.MaxHp;
+
+                    session.Hero.Inventory.Add(loot);
+                    bool equipped = session.Hero.TryAutoEquip(loot, out var replaced);
+
+                    string delta = BuildDeltaList(before, session.Hero.TotalStats, beforeHP, session.Hero.MaxHp);
+                    ChestAnimation.ShowLoot(loot, equipped, replaced, delta, AnimSpeed.Normal);
+                    ConsoleUI.ClearWithSize(110, 38);
+                }
+
+                // Kollision mit Gegner → Kampf
+                int idx = enemies.FindIndex(e => e.X == px && e.Y == py);
+                if (idx >= 0)
+                {
+                    var e = enemies[idx];
+                    if (RunMapCombat(session, e))
                     {
-                        try
+                        enemies.RemoveAt(idx);
+                        if (enemies.Count == 0 && !bossSpawned)
                         {
-                            if (!HandleEncounter(session))
-                            {
-                                // bei Niederlage: Session speichern & zurück
-                                running = false;
-                            }
+                            bossCountdown = 25; // Schritte bis Boss
+                            MessageBox.ShowCenter("Alle Feinde besiegt. Der Boss spürt deine Präsenz…");
                         }
-                        catch (OperationCanceledException)
-                        {
-                            // Flucht erfolgreich: einfach weiterlaufen
-                        }
+                    }
+                    else
+                    {
+                        running = false; // Tod/Abbruch
+                    }
+                }
+                else
+                {
+                    // seltene Random-Encounters (2 %)
+                    if (rng.Next(100) < 2)
+                    {
+                        bool cont = HandleRandomEncounter(session);
+                        if (!cont) running = false;
+                    }
+                }
+
+                // Boss-Countdown
+                if (bossCountdown > 0)
+                {
+                    bossCountdown--;
+                    if (bossCountdown == 0 && !bossSpawned)
+                    {
+                        var b = SpawnBoss(rng, mapObj, stage: 1);
+                        enemies.Add(b);
+                        bossSpawned = true;
+                        MessageBox.ShowCenter("⚔ Ein dunkles Grollen… Der Boss ist erschienen!");
                     }
                 }
             }
@@ -115,36 +118,63 @@ namespace DungeonXRaid
             Console.CursorVisible = true;
         }
 
-        private static bool HandleEncounter(GameSession session)
+        private static bool HandleRandomEncounter(GameSession session)
         {
             bool heroDied, won;
             int gold;
-            Items.ItemModel? drop;
+            ItemModel? drop;
 
-            won = Combat.Run(session.Hero, out heroDied, out gold, out drop);
-            if (heroDied) return false; 
-
-            // Nachkampf-HP-Check (nie negativ)
+            won = Core.Combat.Run(session.Hero, out heroDied, out gold, out drop);
+            if (heroDied) return false;
             if (session.Hero.Hp < 0) session.Hero.Hp = 0;
+            ConsoleUI.ClearWithSize(110, 38);
             return true;
         }
 
-        // Rendering (ein Frame)
-        private static void RenderFrame(GameSession session, Map mapObj, int px, int py)
+        private static bool RunMapCombat(GameSession session, MapEnemy e)
         {
+            bool heroDied, won;
+            int gold;
+            ItemModel? drop;
+
+            won = Core.Combat.Run(session.Hero, out heroDied, out gold, out drop);
+            if (heroDied) return false;
+            ConsoleUI.ClearWithSize(110, 38);
+            return true;
+        }
+
+        private static List<MapEnemy> SpawnStageEnemies(Random rng, Map map, int stage)
+        {
+            int count = Math.Clamp((map.Width * map.Height) / 800, 6, 14);
+            var list = new List<MapEnemy>();
+            for (int i = 0; i < count; i++)
+            {
+                var pos = map.GetRandomFloor();
+                int hp = 16 + rng.Next(8);
+                int atk = 3 + rng.Next(3);
+                int def = 9 + rng.Next(3);
+                list.Add(new MapEnemy(pos.x, pos.y, "Mob", hp, hp, atk, def, 6 + rng.Next(6), 'e', false));
+            }
+            return list;
+        }
+
+        private static MapEnemy SpawnBoss(Random rng, Map map, int stage)
+        {
+            var pos = map.GetRandomFloor();
+            return new MapEnemy(pos.x, pos.y, "BOSS", 80, 80, 10, 12, 50, 'B', true);
+        }
+
+        private static void RenderFrame(GameSession session, Map mapObj, int px, int py, List<MapEnemy> enemies, int bossCountdown, bool bossSpawned)
+        {
+            ConsoleUI.ClearWithSize(110, 38);
             var sb = new StringBuilder((mapObj.Width + 1) * (mapObj.Height + 16));
 
             var baseStats = session.Hero.Base;
             var totalStats = session.Hero.TotalStats;
 
-            // Kopf/HUD
             sb.AppendLine(" Status ");
-            sb.AppendLine(
-                $"Name: {session.Hero.Name}   Klasse: {session.Hero.Class}   " +
-                $"HP: {session.Hero.Hp}/{session.Hero.MaxHp}   Gold: {session.Hero.Gold}   Level: {session.Hero.Level}"
-            );
+            sb.AppendLine($"Name: {session.Hero.Name}   Klasse: {session.Hero.Class}   HP: {session.Hero.Hp}/{session.Hero.MaxHp}   Gold: {session.Hero.Gold}   Level: {session.Hero.Level}");
 
-            // Werte inkl. Bonusanteil in Klammern
             sb.AppendLine(
                 $"STR: {FmtWithBonus(totalStats.STR, totalStats.STR - baseStats.STR),-8}" +
                 $"DEX: {FmtWithBonus(totalStats.DEX, totalStats.DEX - baseStats.DEX),-8}" +
@@ -154,7 +184,6 @@ namespace DungeonXRaid
                 $"Items: {session.Hero.Inventory.Count}"
             );
 
-            // Ausrüstung + Kurzboni
             sb.AppendLine(
                 $"Waffe: {ItemLine(session.Hero.Equip.Weapon),-24}" +
                 $"Rüstung: {ItemLine(session.Hero.Equip.Armor),-28}" +
@@ -162,63 +191,61 @@ namespace DungeonXRaid
             );
             sb.AppendLine();
 
-            // Karte
             int MAP_W = mapObj.Width, MAP_H = mapObj.Height;
-            sb.Append(' ').Append(' ').Append(' ').AppendLine(new string('─', MAP_W + 2));
+            sb.Append("   ").AppendLine(new string('─', MAP_W + 2));
             for (int y = 0; y < MAP_H; y++)
             {
                 sb.Append("   │");
                 for (int x = 0; x < MAP_W; x++)
                 {
                     if (x == px && y == py) { sb.Append('@'); continue; }
+
+                    var en = enemies.FirstOrDefault(e => e.X == x && e.Y == y);
+                    if (en != null) { sb.Append(en.IsBoss ? 'B' : 'E'); continue; }
+
                     char tile = mapObj.GetTile(x, y);
-                    if (tile == 'C') sb.Append('C'); else sb.Append(tile == '#' ? '#' : '.');
+                    if (tile == 'C') sb.Append('C');
+                    else sb.Append(tile == '#' ? '#' : '.');
                 }
                 sb.AppendLine("│");
             }
-            sb.Append(' ').Append(' ').Append(' ').AppendLine(new string('─', MAP_W + 2));
+            sb.Append("   ").AppendLine(new string('─', MAP_W + 2));
 
-            if (mapObj.IsChest(px, py))
-                sb.AppendLine("[Enter] Truhe öffnen   |   [Esc] zurück");
-            else
-                sb.AppendLine("[WASD] bewegen (5% Encounter)   |   [Esc] zurück");
+            string extra = (bossCountdown > 0 && !bossSpawned) ? $"  |  Boss in {bossCountdown} Schritten" : "";
+            sb.AppendLine($"[WASD] bewegen (2% Encounter){extra}    |    [Esc] Menü");
 
-            try { Console.SetCursorPosition(0, 0); } catch { }
             Console.Write(sb.ToString());
         }
 
-        // Anzeige-Helfer
-        private static string FmtWithBonus(int total, int bonus)
-            => bonus != 0 ? $"{total} (+{bonus})" : $"{total}";
-
-        private static string ItemBonusShort(ItemModel it)
-        {
-            var b = it.Bonus;
-            var parts = new List<string>();
-            void add(string k, int v) { if (v != 0) parts.Add($"+{k}{v}"); }
-            add("STR", b.STR); add("DEX", b.DEX); add("INT", b.INT);
-            add("VIT", b.VIT); add("DEF", b.DEF); if (b.HPBonus != 0) parts.Add($"+HP{b.HPBonus}");
-            return parts.Count == 0 ? "—" : string.Join(", ", parts);
-        }
+        private static string FmtWithBonus(int total, int bonus) =>
+            bonus != 0 ? $"{total} ({(bonus > 0 ? "+" : "")}{bonus})" : $"{total}";
 
         private static string ItemLine(ItemModel? it)
-            => it == null ? "-" : $"{it.Name} ({ItemBonusShort(it)})";
+        {
+            if (it == null) return "-";
+            var b = it.Bonus;
+            var parts = new List<string>();
+            if (b.STR != 0) parts.Add($"STR+{b.STR}");
+            if (b.DEX != 0) parts.Add($"DEX+{b.DEX}");
+            if (b.INT != 0) parts.Add($"INT+{b.INT}");
+            if (b.VIT != 0) parts.Add($"VIT+{b.VIT}");
+            if (b.DEF != 0) parts.Add($"DEF+{b.DEF}");
+            if (b.HPBonus != 0) parts.Add($"HP+{b.HPBonus}");
+            string bonus = parts.Count > 0 ? string.Join(",", parts) : "—";
+            return $"{it.Name} [+{it.Power}] ({bonus})";
+        }
 
         private static string BuildDeltaList(StatBlock before, StatBlock after, int beforeMaxHp, int afterMaxHp)
         {
-            var parts = new List<string>();
-            void add(string label, int a, int b)
-            {
-                int d = b - a;
-                if (d != 0) parts.Add($"{label} {(d > 0 ? "+" : "")}{d}");
-            }
-            add(nameof(StatBlock.STR), before.STR, after.STR);
-            add(nameof(StatBlock.DEX), before.DEX, after.DEX);
-            add(nameof(StatBlock.INT), before.INT, after.INT);
-            add(nameof(StatBlock.VIT), before.VIT, after.VIT);
-            add(nameof(StatBlock.DEF), before.DEF, after.DEF);
-            add("MaxHP", beforeMaxHp, afterMaxHp);
-            return parts.Count == 0 ? "—" : string.Join(", ", parts);
+            var diffs = new List<string>();
+            void Add(string n, int a, int b) { int d = b - a; if (d != 0) diffs.Add($"{n}{(d > 0 ? "+" : "")}{d}"); }
+            Add("STR", before.STR, after.STR);
+            Add("DEX", before.DEX, after.DEX);
+            Add("INT", before.INT, after.INT);
+            Add("VIT", before.VIT, after.VIT);
+            Add("DEF", before.DEF, after.DEF);
+            Add("HP", beforeMaxHp, afterMaxHp);
+            return diffs.Count == 0 ? "—" : string.Join(", ", diffs);
         }
     }
 }

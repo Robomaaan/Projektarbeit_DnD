@@ -2,6 +2,25 @@
 
 namespace DungeonXRaid.Core
 {
+    // einfache GameSession (Save-Container)
+    public class GameSession
+    {
+        public Character Hero { get; set; }
+        public string SaveName { get; set; }
+        public DateTime Created { get; set; } = DateTime.Now;
+        public DateTime LastPlayed { get; set; } = DateTime.Now;
+
+        public string Id => SaveName; // Dateiname (ohne .json)
+
+        public GameSession(Character hero)
+        {
+            Hero = hero;
+            SaveName = hero.Name;
+        }
+
+        public static GameSession New(Character hero) => new GameSession(hero);
+    }
+
     public static class SaveSystem
     {
         public static string SaveDir =>
@@ -35,6 +54,7 @@ namespace DungeonXRaid.Core
             return true;
         }
 
+        // für Menüs
         public static List<(string Id, string Display)> ListSaves()
         {
             var list = new List<(string Id, string Display)>();
@@ -47,7 +67,7 @@ namespace DungeonXRaid.Core
                     if (s != null)
                         list.Add((s.Id, $"{s.SaveName}  —  {s.Hero.Class}  —  {s.LastPlayed:g}"));
                 }
-                catch {  }
+                catch { }
             }
 
             return list
@@ -57,15 +77,17 @@ namespace DungeonXRaid.Core
 
         public static GameSession LoadLastOrCreateDefault()
         {
-            var all = ListSaves();
-            if (all.Count > 0)
+            var saves = ListSaves();
+            if (saves.Count > 0)
             {
-                var s = Load(all.First().Id);
-                if (s != null) return s;
+                var lastId = saves.First().Id;
+                var session = Load(lastId);
+                if (session != null)
+                    return session;
             }
-            var def = GameSession.New(new Character { Name = "Rogue", Class = HeroClass.Rogue });
-            Save(def);
-            return def;
+            // Hier muss ggf. ein Default-Character erstellt werden
+            var defaultHero = new Character { Name = "DefaultHero", Class = HeroClass.Warrior };
+            return GameSession.New(defaultHero);
         }
     }
 }

@@ -16,7 +16,6 @@ namespace DungeonXRaid.UI
             const string mark = "> ";
             const string nomark = "  ";
 
-            // einmaliger Rahmen
             ConsoleUI.ClearWithSize();
             ConsoleUI.DrawBox(2, 1, Console.WindowWidth - 4, Console.WindowHeight - 2, title);
             int cx = 6, cy = 5;
@@ -24,7 +23,6 @@ namespace DungeonXRaid.UI
                 ConsoleUI.Write(cx, cy + i * 2, ((i == index) ? mark : nomark) + items[i]);
             ConsoleUI.Write(cx, cy + items.Length * 2 + 1, "[Enter] auswählen   [Esc] zurück/beenden");
 
-            // nur Auswahlzeilen aktualisieren
             while (true)
             {
                 var k = ConsoleUI.ReadKey().Key;
@@ -60,6 +58,15 @@ namespace DungeonXRaid.UI
 
     public static class CharacterCreator
     {
+        private static (string line, ConsoleColor color) ClassLine(HeroClass c)
+        {
+            var proto = Character.New("Preview", c);
+            string stats = $"STR {proto.Base.STR}  DEX {proto.Base.DEX}  INT {proto.Base.INT}  VIT {proto.Base.VIT}  DEF {proto.Base.DEF}";
+            string name = c switch { HeroClass.Warrior => "Warrior", HeroClass.Mage => "Mage", HeroClass.Rogue => "Rogue", _ => "Monk" };
+            var col = c switch { HeroClass.Warrior => ConsoleColor.Yellow, HeroClass.Mage => ConsoleColor.Cyan, HeroClass.Rogue => ConsoleColor.Green, _ => ConsoleColor.Magenta };
+            return ($"{name,-8}  |  {stats}", col);
+        }
+
         public static Character? Run()
         {
             Console.CursorVisible = false;
@@ -69,21 +76,37 @@ namespace DungeonXRaid.UI
             var name = ConsoleUI.Prompt(6, 6, "Name: ");
             if (string.IsNullOrWhiteSpace(name)) return null;
 
-            ConsoleUI.Write(6, 9, "Klasse wählen:  [1] Warrior  [2] Mage  [3] Rogue  [4] Monk");
-            HeroClass cls = HeroClass.Rogue;
+            int cx = 6; int cy = 9;
+            ConsoleUI.Write(cx, cy, "Klasse wählen (↑/↓, Enter, Esc):");
+
+            var classes = new[] { HeroClass.Warrior, HeroClass.Mage, HeroClass.Rogue, HeroClass.Monk };
+            int idx = 0;
+
+            void Paint()
+            {
+                for (int i = 0; i < classes.Length; i++)
+                {
+                    var (line, col) = ClassLine(classes[i]);
+                    string marker = (i == idx) ? "> " : "  ";
+                    ConsoleUI.WithColor(col, () => ConsoleUI.Write(cx, cy + 2 + i, marker + line + "    "));
+                }
+            }
+
+            Paint();
             while (true)
             {
                 var k = ConsoleUI.ReadKey().Key;
-                if (k == ConsoleKey.D1 || k == ConsoleKey.NumPad1) { cls = HeroClass.Warrior; break; }
-                if (k == ConsoleKey.D2 || k == ConsoleKey.NumPad2) { cls = HeroClass.Mage; break; }
-                if (k == ConsoleKey.D3 || k == ConsoleKey.NumPad3) { cls = HeroClass.Rogue; break; }
-                if (k == ConsoleKey.D4 || k == ConsoleKey.NumPad4) { cls = HeroClass.Monk; break; }
                 if (k == ConsoleKey.Escape) return null;
+                if (k == ConsoleKey.UpArrow) { idx = (idx - 1 + classes.Length) % classes.Length; Paint(); }
+                else if (k == ConsoleKey.DownArrow) { idx = (idx + 1) % classes.Length; Paint(); }
+                else if (k == ConsoleKey.Enter) break;
+                else if (k is ConsoleKey.D1 or ConsoleKey.NumPad1) { idx = 0; Paint(); break; }
+                else if (k is ConsoleKey.D2 or ConsoleKey.NumPad2) { idx = 1; Paint(); break; }
+                else if (k is ConsoleKey.D3 or ConsoleKey.NumPad3) { idx = 2; Paint(); break; }
+                else if (k is ConsoleKey.D4 or ConsoleKey.NumPad4) { idx = 3; Paint(); break; }
             }
 
-            // Charakter mit Klassen-Startwerten erzeugen
-            var hero = Character.New(name, cls);
-            return hero;
+            return Character.New(name, classes[idx]);
         }
     }
 
@@ -108,8 +131,7 @@ namespace DungeonXRaid.UI
                 {
                     ConsoleUI.Write(cx, cy, "Keine Spielstände vorhanden.");
                     ConsoleUI.Write(cx, cy + 2, "[Esc] zurück");
-                    var k0 = ConsoleUI.ReadKey().Key;
-                    if (k0 == ConsoleKey.Escape) return null;
+                    if (ConsoleUI.ReadKey().Key == ConsoleKey.Escape) return null;
                     continue;
                 }
 
@@ -137,7 +159,7 @@ namespace DungeonXRaid.UI
                         var s = SaveSystem.Load(saves[index].Id);
                         if (s != null) return s;
                     }
-                    else break; 
+                    else break;
                 }
             }
         }
@@ -164,8 +186,7 @@ namespace DungeonXRaid.UI
                 {
                     ConsoleUI.Write(cx, cy, "Keine Spielstände vorhanden.");
                     ConsoleUI.Write(cx, cy + 2, "[Esc] zurück");
-                    var k0 = ConsoleUI.ReadKey().Key;
-                    if (k0 == ConsoleKey.Escape) return;
+                    if (ConsoleUI.ReadKey().Key == ConsoleKey.Escape) return;
                     continue;
                 }
 
@@ -173,7 +194,7 @@ namespace DungeonXRaid.UI
 
                 for (int i = 0; i < saves.Count; i++)
                     ConsoleUI.Write(cx, cy + i, ((i == index) ? mark : nomark) + saves[i].Display);
-                ConsoleUI.Write(cx, cy + saves.Count + 2, "[Enter] auswählen   [Esc] zurück");
+                ConsoleUI.Write(cx, cy + saves.Count + 2, "[Enter] löschen   [Esc] zurück");
 
                 while (true)
                 {
@@ -191,8 +212,8 @@ namespace DungeonXRaid.UI
                     else if (k == ConsoleKey.Enter)
                     {
                         var ok = SaveSystem.Delete(saves[index].Id);
-                        MessageBox.ShowCenter(ok ? "Spielstand gelöscht." : "Löschen fehlgeschlagen.");
-                        break; 
+                        MessageBox.ShowCenter(ok ? "Gelöscht." : "Löschen fehlgeschlagen.");
+                        break; // Liste neu laden
                     }
                     else break;
                 }

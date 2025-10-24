@@ -4,9 +4,20 @@
 
     public static class ConsoleUI
     {
-        // Low-level Safe Writes 
         private static int MaxW => Math.Max(1, Math.Min(Console.BufferWidth, Console.WindowWidth));
         private static int MaxH => Math.Max(1, Math.Min(Console.BufferHeight, Console.WindowHeight));
+
+        public static void WithColor(ConsoleColor color, Action action)
+        {
+            var old = Console.ForegroundColor;
+            try { Console.ForegroundColor = color; action(); }
+            finally { Console.ForegroundColor = old; }
+        }
+
+        public static void SafeClearArea(int x, int y, int w, int h)
+        {
+            for (int j = 0; j < h; j++) Write(x, y + j, new string(' ', Math.Max(0, w)));
+        }
 
         private static void SafeSetCursor(int x, int y)
         {
@@ -27,7 +38,7 @@
         {
             if (y < 0 || y >= MaxH) return;
             if (x < 0)
-            { // links abschneiden
+            {
                 int cut = -x;
                 if (cut >= text.Length) return;
                 text = text.Substring(cut);
@@ -42,10 +53,8 @@
 
         public static ConsoleKeyInfo ReadKey() => Console.ReadKey(true);
 
-        // High-level UI helpers
-        public static void ClearWithSize(int w = 110, int h = 35)
+        public static void ClearWithSize(int w = 110, int h = 38)
         {
-            // Zielgrößen begrenzen
             var W = Math.Min(w, Console.LargestWindowWidth);
             var H = Math.Min(h, Console.LargestWindowHeight);
 
@@ -53,36 +62,29 @@
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    // Reihenfolge: erst Buffer >= Window, dann Window
                     int bw = Math.Max(W, Console.BufferWidth);
                     int bh = Math.Max(H, Console.BufferHeight);
                     Console.SetBufferSize(bw, bh);
                     Console.SetWindowSize(Math.Min(W, bw), Math.Min(H, bh));
                 }
             }
-            catch
-            {
-                // Auf Nicht-Windows/kleinen Terminals: best effort weiter
-            }
+            catch { }
 
             Console.Clear();
         }
 
         public static void DrawBox(int x, int y, int w, int h, string title = "")
         {
-            // Clipping auf sichtbare Fläche
             int maxW = MaxW, maxH = MaxH;
             if (x >= maxW || y >= maxH) return;
             w = Math.Max(2, Math.Min(w, maxW - x));
             h = Math.Max(2, Math.Min(h, maxH - y));
 
-            // Ober-/Unterkante
             for (int i = 0; i < w; i++)
             {
                 Put(x + i, y, i == 0 ? '┌' : (i == w - 1 ? '┐' : '─'));
                 Put(x + i, y + h - 1, i == 0 ? '└' : (i == w - 1 ? '┘' : '─'));
             }
-            // Seiten
             for (int j = 1; j < h - 1; j++)
             {
                 Put(x, y + j, '│');
@@ -91,7 +93,6 @@
 
             if (!string.IsNullOrWhiteSpace(title))
             {
-                // Titel auf Innenbreite kürzen
                 int inner = Math.Max(0, w - 4);
                 string t = $" {title} ";
                 if (t.Length > inner) t = t.Substring(0, inner);
@@ -124,17 +125,12 @@
 
             ConsoleUI.DrawBox(x, y, w, h, "Info");
 
-            // Word-Wrap innerhalb der Box
             int innerW = w - 4;
             var lines = new List<string>();
             foreach (var raw in (text ?? "").Replace("\r", "").Split('\n'))
             {
                 var t = raw.TrimEnd();
-                while (t.Length > innerW)
-                {
-                    lines.Add(t.Substring(0, innerW));
-                    t = t.Substring(innerW);
-                }
+                while (t.Length > innerW) { lines.Add(t[..innerW]); t = t[innerW..]; }
                 lines.Add(t);
             }
 

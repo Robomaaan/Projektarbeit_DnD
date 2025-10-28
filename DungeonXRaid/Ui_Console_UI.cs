@@ -62,10 +62,18 @@
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
+                    // Einmalig Buffer/Window auf gewünschte Werte setzen.
+                    // Diese Aufrufe vermeiden wir später bei jedem Redraw, da sie Flackern verursachen.
                     int bw = Math.Max(W, Console.BufferWidth);
                     int bh = Math.Max(H, Console.BufferHeight);
-                    Console.SetBufferSize(bw, bh);
-                    Console.SetWindowSize(Math.Min(W, bw), Math.Min(H, bh));
+                    Console.SetBufferSize(bw, bh);  
+
+                    int desiredWindowWidth = Math.Min(W, Console.BufferWidth);
+                    int desiredWindowHeight = Math.Min(H, Console.BufferHeight);
+                    if (Console.WindowWidth != desiredWindowWidth || Console.WindowHeight != desiredWindowHeight)
+                    {
+                        Console.SetWindowSize(desiredWindowWidth, desiredWindowHeight);
+                    }
                 }
             }
             catch { }

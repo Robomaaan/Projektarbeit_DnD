@@ -1,4 +1,5 @@
-﻿using System.Text;
+using System.Text;
+using DungeonXRaid.UI;
 
 namespace DungeonXRaid
 {
@@ -8,9 +9,13 @@ namespace DungeonXRaid
         {
             Console.InputEncoding = Encoding.UTF8;
             Console.OutputEncoding = Encoding.UTF8;
+
+            // Einmalig Konsole initialisieren (Buffer/Window nur beim Start setzen)
+            ConsoleUI.InitConsole(110, 38);
+
             try
             {
-                Console.Title = "DungeonXRaid – ASCII Rogue";
+                Console.Title = "DungeonXRaid � ASCII Rogue";
                 Console.CursorVisible = false;
                 App.Run();
             }

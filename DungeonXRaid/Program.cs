@@ -1,9 +1,13 @@
-﻿namespace DungeonXRaid
+﻿using System.Text;
+
+namespace DungeonXRaid
 {
     internal static class Program
     {
         static void Main()
         {
+            Console.InputEncoding = Encoding.UTF8;
+            Console.OutputEncoding = Encoding.UTF8;
             try
             {
                 Console.Title = "DungeonXRaid – ASCII Rogue";

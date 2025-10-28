@@ -104,9 +104,13 @@ namespace DungeonXRaid.Core
             RenderEnemyArt(8 + boxW, 5, enemy.Glyph);
 
             ConsoleUI.DrawBox(4, 3 + boxH + 1, W - 8, 10, "Würfel");
-            int diceX = 6, diceY = 3 + boxH + 3, diceSize = 7;
-            DrawDiceBox(diceX, diceY, diceSize);
-            if (!showRollPlaceholder) ConsoleUI.Write(diceX + 1, diceY + diceSize - 2, "d20:—");
+            int diceX = 6, diceY = 3 + boxH + 3;
+            int diceWidth = 11;   // ← breiter machen
+            int diceHeight = 7;   // ← gleich lassen
+            DrawDiceBox(diceX, diceY, diceWidth, diceHeight);
+            if (!showRollPlaceholder)
+                ConsoleUI.Write(diceX + 1, diceY + diceHeight - 2, "d20:—");
+
 
             DrawDmgBar(22, 3 + boxH + 3, dmg, playerTurn);
 
@@ -126,22 +130,24 @@ namespace DungeonXRaid.Core
             }
 
             ConsoleUI.Write(6, H - 3, "[Enter/Nächstes]  [Esc/Fliehen]");
+            int diceSize = diceHeight; 
             return (diceX, diceY, diceSize);
         }
 
-        private static void DrawDiceBox(int x, int y, int size)
+        private static void DrawDiceBox(int x, int y, int width, int height)
         {
-            for (int i = 0; i < size; i++)
+            for (int i = 0; i < width; i++)
             {
-                ConsoleUI.Put(x + i, y, i == 0 ? '┌' : (i == size - 1 ? '┐' : '─'));
-                ConsoleUI.Put(x + i, y + size - 1, i == 0 ? '└' : (i == size - 1 ? '┘' : '─'));
+                ConsoleUI.Put(x + i, y, i == 0 ? '┌' : (i == width - 1 ? '┐' : '─'));
+                ConsoleUI.Put(x + i, y + height - 1, i == 0 ? '└' : (i == width - 1 ? '┘' : '─'));
             }
-            for (int j = 1; j < size - 1; j++)
+            for (int j = 1; j < height - 1; j++)
             {
                 ConsoleUI.Put(x, y + j, '│');
-                ConsoleUI.Put(x + size - 1, y + j, '│');
+                ConsoleUI.Put(x + width - 1, y + j, '│');
             }
         }
+
 
         // echte Sicht-Animation (~2s): Zahlen laufen im Würfel und werden langsamer
         private static int AnimateDiceRoll(int x, int y, int size, int faces, int durationMs)

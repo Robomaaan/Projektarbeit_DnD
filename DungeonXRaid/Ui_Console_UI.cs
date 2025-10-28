@@ -61,9 +61,7 @@
             try
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    // Einmalig Buffer/Window auf gewünschte Werte setzen.
-                    // Diese Aufrufe vermeiden wir später bei jedem Redraw, da sie Flackern verursachen.
+                {            
                     int bw = Math.Max(W, Console.BufferWidth);
                     int bh = Math.Max(H, Console.BufferHeight);
                     Console.SetBufferSize(bw, bh);  

@@ -97,7 +97,7 @@
         private void PlaceChests()
         {
             int area = Width * Height;
-            int chestCount = Math.Clamp(area / 900, 3, 12); // 80x28 → ca. 6–7 Truhen
+            int chestCount = Math.Clamp(area / 900, 3, 12); // 80x28 -> ca. 6–7 Truhen
 
             int tries = chestCount * 20;
             while (chestCount > 0 && tries-- > 0)
@@ -105,8 +105,8 @@
                 int x = rng.Next(2, Width - 2);
                 int y = rng.Next(2, Height - 2);
 
-                if (tiles[y, x] == '.' && // auf Boden
-                    tiles[y - 1, x] != '#' && tiles[y + 1, x] != '#' &&   // nicht direkt im schmalen Gang
+                if (tiles[y, x] == '.' && 
+                    tiles[y - 1, x] != '#' && tiles[y + 1, x] != '#' &&   
                     tiles[y, x - 1] != '#' && tiles[y, x + 1] != '#' &&
                     tiles[y, x] != 'C')
                 {

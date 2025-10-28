@@ -33,10 +33,10 @@ namespace DungeonXRaid.Anim
             int innerW = w - 4;
             int innerH = h - 4;
 
-            // Timing (skalierbar nach speed)
+            // Timing
             var (frameDelay, textDelay, sparkleFrames) = BaseTimingsFor(speed);
 
-            // Frames (kannst du später erweitern)
+            // Frames 
             var frames = ChestFrames();
 
             // Helper: zentriert einen Chest-Frame zeichnen
@@ -56,24 +56,24 @@ namespace DungeonXRaid.Anim
                     ConsoleUI.Write(fx, fy + i, art[i]);
             }
 
-            // 1) Truhen-Opening abspielen (skippable mit Enter)
+            // Truhen-Opening abspielen 
             foreach (var f in frames)
             {
                 DrawFrame(f);
                 if (SleepSkippable(frameDelay)) break;
             }
 
-            // 2) Sparkle/Glitzer nach dem Öffnen
+            // Sparkle/Glitzer nach dem Öffnen
             Sparkle(innerLeft, innerTop + 1, innerW, 6, sparkleFrames, Math.Max(15, frameDelay / 2));
 
-            // 3) Item „springt“ hoch (robust, ohne Ghosting)
+            // Item „springt“ hoch 
             string itemLine = $"• {loot.Name} [{loot.Rarity}] (Power +{loot.Power})  –  {ItemBonusShort(loot)}";
             int startY = y + h - 4;
             int targetY = innerTop + 1;
 
             FlyInCentered(itemLine, innerLeft, innerTop, innerW, startY, targetY, textDelay, LootColor(loot.Rarity));
 
-            // 4) Ausrüstungs-/Delta-Info
+            // Ausrüstungs-/Delta-Info
             string equipLine = equipped
                 ? $"✓ Automatisch ausgerüstet{(replaced != null ? $" (ersetzt: {replaced.Name} +{replaced.Power})" : "")}"
                 : "Ins Inventar gelegt";
@@ -84,9 +84,9 @@ namespace DungeonXRaid.Anim
             if (!string.IsNullOrEmpty(deltaLine))
                 WriteCentered(deltaLine, innerLeft, infoY + 1, innerW, ConsoleColor.DarkCyan);
 
-            // 5) Abschluss-Hinweis
+            // Abschluss-Hinweis
             ConsoleUI.Write(innerLeft, y + h - 2, "[Enter] weiter");
-            BeepSoft(); // optional
+            BeepSoft(); 
 
             while (ConsoleUI.ReadKey().Key != ConsoleKey.Enter) { }
 
@@ -151,7 +151,7 @@ namespace DungeonXRaid.Anim
                 double eased = 1 - (1 - t) * (1 - t);
                 int yPos = targetY + (int)Math.Round((startY - targetY) * (1 - eased));
 
-                // alte Position KOMPLETT löschen
+                // alte Position komplett löschen
                 if (prevY >= 0)
                     ConsoleUI.Write(left, prevY, new string(' ', width));
 
@@ -167,7 +167,7 @@ namespace DungeonXRaid.Anim
                 if (SleepSkippable(delay)) break;
             }
 
-            // Nachlauf: alle Zeilen außer der finalen nochmals säubern
+            
             for (int y = Math.Min(targetY, startY); y <= Math.Max(targetY, startY); y++)
                 if (y != prevY)
                     ConsoleUI.Write(left, y, new string(' ', width));

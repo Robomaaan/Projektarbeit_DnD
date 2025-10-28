@@ -22,7 +22,7 @@ namespace DungeonXRaid.Core
 
             while (enemy.Hp > 0 && hero.Hp > 0)
             {
-                // ---- Spielerzug ----
+                //Spielerzug
                 var ui = RenderPanel(hero, enemy, "Du greifst an!", showRollPlaceholder: true);
                 int d20 = AnimateDiceRoll(ui.diceX, ui.diceY, ui.diceSize, faces: 20, durationMs: 2000);
                 int attack = d20 + hero.TotalStats.STR;
@@ -37,7 +37,7 @@ namespace DungeonXRaid.Core
 
                 if (enemy.Hp <= 0) break;
 
-                // ---- Gegnerzug ----
+                //Gegnerzug
                 ui = RenderPanel(hero, enemy, $"{enemy.Name} greift an!", showRollPlaceholder: true);
                 int d20e = AnimateDiceRoll(ui.diceX, ui.diceY, ui.diceSize, faces: 20, durationMs: 2000);
                 int targetDef = 10 + hero.TotalStats.DEF;
@@ -84,7 +84,7 @@ namespace DungeonXRaid.Core
             return true;
         }
 
-        // ---------- Rendering & Animation ----------
+        //Rendering & Animation 
 
         private static (int diceX, int diceY, int diceSize) RenderPanel(Character hero, EnemyModel enemy, string title, int dmg = 0, bool playerTurn = true, IEnumerable<string>? log = null, bool showRollPlaceholder = false)
         {

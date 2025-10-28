@@ -68,7 +68,7 @@ namespace DungeonXRaid
                     ConsoleUI.ClearWithSize(110, 38);
                 }
 
-                // Kollision mit Gegner → Kampf
+                // Kollision mit Gegner -> Kampf
                 int idx = enemies.FindIndex(e => e.X == px && e.Y == py);
                 if (idx >= 0)
                 {
@@ -89,8 +89,8 @@ namespace DungeonXRaid
                 }
                 else
                 {
-                    // seltene Random-Encounters (2 %)
-                    if (rng.Next(100) < 2)
+                    // seltene Random-Encounters (1 %)
+                    if (rng.Next(100) < 1)
                     {
                         bool cont = HandleRandomEncounter(session);
                         if (!cont) running = false;

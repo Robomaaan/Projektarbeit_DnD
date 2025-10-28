@@ -85,7 +85,7 @@ namespace DungeonXRaid.Core
                 if (session != null)
                     return session;
             }
-            // Hier muss ggf. ein Default-Character erstellt werden
+            
             var defaultHero = new Character { Name = "DefaultHero", Class = HeroClass.Warrior };
             return GameSession.New(defaultHero);
         }

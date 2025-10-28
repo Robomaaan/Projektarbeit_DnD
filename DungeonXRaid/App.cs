@@ -39,7 +39,7 @@ namespace DungeonXRaid
                             MessageBox.ShowCenter($"Run beendet.\nDein Gold wurde in die Meta-Bank übertragen.\nBank: {metaEnd.BankGold}");
                         }
 
-                        // Wenn tot → Shop anbieten und neuer Charakter (mit Upgrades) möglich
+                        // Wenn tot -> Shop anbieten und neuer Charakter (mit Upgrades) möglich
                         if (current.Hero.Hp <= 0)
                         {
                             ShowMetaShop(metaEnd);
